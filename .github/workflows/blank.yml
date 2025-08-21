@@ -2,29 +2,45 @@ name: Build Mod
 
 on:
   push:
-    branches: [ main ]
+    branches: [ "main" ]
   pull_request:
-    branches: [ main ]
+    branches: [ "main" ]
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
+      # Checkout repo
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Set up JDK 21
-        uses: actions/setup-java@v3
+      # Set up Java (change version if needed, e.g. 8, 11, 17, or 21)
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 21
+          java-version: 17
 
-      - name: Build with Gradle
-        run: ./gradlew build
-
-      - name: Upload Mod Jar
-        uses: actions/upload-artifact@v3
+      # Cache Gradle to speed up builds
+      - name: Cache Gradle packages
+        uses: actions/cache@v3
         with:
-          name: CrystalOptimizer
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      # Build the project
+      - name: Build with Gradle
+        run: ./gradlew build --no-daemon
+
+      # Upload build output (.jar files)
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mod-jar
           path: build/libs/*.jar
